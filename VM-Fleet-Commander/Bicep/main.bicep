@@ -1,10 +1,36 @@
-targetScope='subscription'
+@description('The name of you Virtual Machine.')
+param vmName string
 
-param resourceGroupName string
-param resourceGroupLocation string
+@description('Location for all resources.')
+param location string = resourceGroup().location
 
-//create resource group
-resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: resourceGroupName
-  location: resourceGroupLocation
+@description('The size of the VM')
+param vmSize string = 'Standard_D2s_v3'
+
+@description('Username for the Virtual Machine.')
+param adminUsername string
+
+@description('SSH Key or password for the Virtual Machine. SSH key is recommended.')
+@secure()
+param adminPasswordOrKey string
+
+module network './modules/network.bicep' = {
+  name: 'virtual-network'
+  params: {
+    location: location
+  }
 }
+
+module vm './modules/vm.bicep' = {
+  name: 'virtual-machine'
+  params: {
+    vmName: vmName
+    location: location
+    vmSize: vmSize
+    adminUsername: adminUsername
+    adminPasswordOrKey: adminPasswordOrKey
+    vnetId: network.outputs.vnetId
+  }
+}
+
+output sshCommand string = 'ssh ${adminUsername}@${vm.outputs.hostname}'

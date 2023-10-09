@@ -1,0 +1,5 @@
+resources="$(az resource list --resource-group "testRG" | grep id | awk -F \" '{print $4}')"
+
+for id in $resources; do
+    az resource delete --resource-group "testRG" --ids "$id" --verbose
+done
