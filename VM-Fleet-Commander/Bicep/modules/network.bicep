@@ -35,5 +35,6 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2021-05-01' = {
 
 
 output subnetName string = subnet.name
-output vnetId string = virtualNetwork.id
+// output vnetId string = virtualNetwork.id
+output vnetName string = virtualNetwork.name
 

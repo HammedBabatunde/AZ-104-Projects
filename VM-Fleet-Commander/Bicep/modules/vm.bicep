@@ -1,12 +1,14 @@
 param vmName string
 param location string
 param vmSize string
-param vnetId string
+param vnetName string
 
 
 @description('Name of the subnet in the virtual network')
 param subnetName string = 'Subnet'
 
+@description('Number of Virtual Machines to deploy')
+param vmCount int 
 
 @description('Username for the Virtual Machine.')
 param adminUsername string
@@ -41,8 +43,8 @@ param securityType string = 'TrustedLaunch'
 @description('Name of the Network Security Group')
 param networkSecurityGroupName string = 'SecGroupNet'
 
-@description('Unique DNS Name for the Public IP used to access the Virtual Machine.')
-param dnsLabelPrefix string = toLower('${vmName}-${uniqueString(resourceGroup().id)}')
+// @description('Unique DNS Name for the Public IP used to access the Virtual Machine.')
+// param dnsLabelPrefix string 
 
 var osDiskType = 'Standard_LRS'
 
@@ -102,8 +104,8 @@ var publicIPAddressName = '${vmName}PublicIP'
 
 var networkInterfaceName = '${vmName}NetInt'
 
-resource networkInterface 'Microsoft.Network/networkInterfaces@2021-05-01' = {
-  name: networkInterfaceName
+resource networkInterface 'Microsoft.Network/networkInterfaces@2021-05-01'  = [for i in range(0, vmCount) : {
+  name: '${networkInterfaceName}${i}'
   location: location
   properties: {
     ipConfigurations: [
@@ -111,22 +113,19 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2021-05-01' = {
         name: 'ipconfig1'
         properties: {
           subnet: {
-            id: '${vnetId}/subnets/${subnetName}'
+            id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, subnetName)
           }
           privateIPAllocationMethod: 'Dynamic'
           publicIPAddress: {
-            id: publicIPAddress.id
+            id: resourceId('Microsoft.Network/publicIPAddresses', '${publicIPAddressName}${i}')
           }
         }
       }
     ]
-    networkSecurityGroup: {
-      id: networkSecurityGroup.id
-    }
   }
-}
+}]
 
-resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2021-05-01' = {
+resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2021-05-01' =  {
   name: networkSecurityGroupName
   location: location
   properties: {
@@ -149,8 +148,8 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2021-05-0
 }
 
 
-resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2021-05-01' = {
-  name: publicIPAddressName
+resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2021-05-01' =  [for i in range(0, vmCount) : {
+  name: '${vmName}PublicIP${i}test'
   location: location
   sku: {
     name: 'Basic'
@@ -159,15 +158,15 @@ resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2021-05-01' = {
     publicIPAllocationMethod: 'Dynamic'
     publicIPAddressVersion: 'IPv4'
     dnsSettings: {
-      domainNameLabel: dnsLabelPrefix
+      domainNameLabel: toLower('${vmName}PublicIP${i}test-${uniqueString(resourceGroup().id)}')
     }
     idleTimeoutInMinutes: 4
   }
-}
+}]
 
 
-resource vm 'Microsoft.Compute/virtualMachines@2021-11-01' = {
-  name: vmName
+resource vm  'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, vmCount): {
+  name: '${vmName}${i}'
   location: location
   properties: {
     hardwareProfile: {
@@ -185,22 +184,22 @@ resource vm 'Microsoft.Compute/virtualMachines@2021-11-01' = {
     networkProfile: {
       networkInterfaces: [
         {
-          id: networkInterface.id
+          id: resourceId('Microsoft.Network/networkInterfaces', '${networkInterfaceName}${i}')
         }
       ]
     }
     osProfile: {
-      computerName: vmName
+      computerName: '${vmName}${i}'
       adminUsername: adminUsername
       adminPassword: adminPasswordOrKey
       linuxConfiguration: ((authenticationType == 'password') ? null : linuxConfiguration)
     }
     securityProfile: ((securityType == 'TrustedLaunch') ? securityProfileJson : null)
   }
-}
+}]
 
-resource vmExtension 'Microsoft.Compute/virtualMachines/extensions@2022-03-01' = if ((securityType == 'TrustedLaunch') && ((securityProfileJson.uefiSettings.secureBootEnabled == true) && (securityProfileJson.uefiSettings.vTpmEnabled == true))) {
-  parent: vm
+resource vmExtension 'Microsoft.Compute/virtualMachines/extensions@2022-03-01' =   [for i in range(0, vmCount): if ((securityType == 'TrustedLaunch') && ((securityProfileJson.uefiSettings.secureBootEnabled == true) && (securityProfileJson.uefiSettings.vTpmEnabled == true)))  {
+  parent: vm[i]
   name: extensionName
   location: location
   properties: {
@@ -218,7 +217,8 @@ resource vmExtension 'Microsoft.Compute/virtualMachines/extensions@2022-03-01' =
       }
     }
   }
-}
+}]
 
 
-output hostname string = publicIPAddress.properties.dnsSettings.fqdn
+
+
