@@ -104,6 +104,8 @@ var publicIPAddressName = '${vmName}PublicIP'
 
 var networkInterfaceName = '${vmName}NetInt'
 
+
+
 resource networkInterface 'Microsoft.Network/networkInterfaces@2021-05-01'  = [for i in range(0, vmCount) : {
   name: '${networkInterfaceName}${i}'
   location: location
@@ -123,6 +125,9 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2021-05-01'  = [f
       }
     ]
   }
+  dependsOn: [
+    publicIPAddress[i]
+  ]
 }]
 
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2021-05-01' =  {
@@ -145,11 +150,15 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2021-05-0
       }
     ]
   }
+
+  dependsOn: [
+    networkInterface
+  ]
 }
 
 
 resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2021-05-01' =  [for i in range(0, vmCount) : {
-  name: '${vmName}PublicIP${i}test'
+  name: '${publicIPAddressName}${i}'
   location: location
   sku: {
     name: 'Basic'
@@ -158,7 +167,7 @@ resource publicIPAddress 'Microsoft.Network/publicIPAddresses@2021-05-01' =  [fo
     publicIPAllocationMethod: 'Dynamic'
     publicIPAddressVersion: 'IPv4'
     dnsSettings: {
-      domainNameLabel: toLower('${vmName}PublicIP${i}test-${uniqueString(resourceGroup().id)}')
+      domainNameLabel: toLower('${vmName}PublicIP${i}${uniqueString(resourceGroup().id)}')
     }
     idleTimeoutInMinutes: 4
   }
@@ -196,6 +205,10 @@ resource vm  'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0,
     }
     securityProfile: ((securityType == 'TrustedLaunch') ? securityProfileJson : null)
   }
+
+  dependsOn: [
+    networkInterface[i]
+  ]
 }]
 
 resource vmExtension 'Microsoft.Compute/virtualMachines/extensions@2022-03-01' =   [for i in range(0, vmCount): if ((securityType == 'TrustedLaunch') && ((securityProfileJson.uefiSettings.secureBootEnabled == true) && (securityProfileJson.uefiSettings.vTpmEnabled == true)))  {
