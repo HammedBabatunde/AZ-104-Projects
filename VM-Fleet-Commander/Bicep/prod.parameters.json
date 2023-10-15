@@ -3,10 +3,13 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
       "vmName": {
-        "value": "tundebaba"
+        "value": "prodVM"
       },
       "adminUsername": {
-        "value": "azureuser"
+        "value": "prodadmin"
+      },
+      "vmCount": {
+        "value": 1
       }
     }
   }
