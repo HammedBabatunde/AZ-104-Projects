@@ -15,7 +15,7 @@ param adminUsername string
 param adminPasswordOrKey string
 
 @description('Number of VMs to deploy.')
-param vmCount int = 3
+param vmCount int
 
 module network './modules/network.bicep' = {
   name: 'virtual-network'
