@@ -1,3 +1,4 @@
+#This script allows you to delete multiple resources in a resource group in Azure
 resources="$(az resource list --resource-group "testRG" | grep id | awk -F \" '{print $4}')"
 
 for id in $resources; do
