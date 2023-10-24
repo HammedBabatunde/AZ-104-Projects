@@ -14,12 +14,17 @@ param adminUsername string
 @secure()
 param adminPasswordOrKey string
 
+@description('Number of VMs to deploy.')
+param vmCount int
+
 module network './modules/network.bicep' = {
   name: 'virtual-network'
   params: {
     location: location
   }
 }
+
+
 
 module vm './modules/vm.bicep' = {
   name: 'virtual-machine'
@@ -29,8 +34,9 @@ module vm './modules/vm.bicep' = {
     vmSize: vmSize
     adminUsername: adminUsername
     adminPasswordOrKey: adminPasswordOrKey
-    vnetId: network.outputs.vnetId
+    vnetName: network.outputs.vnetName
+    vmCount: vmCount
   }
 }
 
-output sshCommand string = 'ssh ${adminUsername}@${vm.outputs.hostname}'
+
